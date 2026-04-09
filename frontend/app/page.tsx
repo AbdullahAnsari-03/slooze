@@ -4,19 +4,20 @@ import { useState } from 'react';
 import { gql } from '@apollo/client';
 import { useQuery, useMutation } from '@apollo/client/react';
 import toast from 'react-hot-toast';
-import { 
-  Package, 
-  MapPin, 
-  CheckCircle, 
-  XCircle, 
-  Plus, 
-  LayoutDashboard, 
-  User, 
-  ShieldCheck, 
+import {
+  Package,
+  MapPin,
+  CheckCircle,
+  XCircle,
+  Plus,
+  LayoutDashboard,
+  User,
+  ShieldCheck,
   Globe2,
   Clock,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  CreditCard
 } from 'lucide-react';
 
 const GET_USERS = gql`
@@ -54,6 +55,12 @@ const CANCEL_ORDER = gql`
   }
 `;
 
+const UPDATE_PAYMENT = gql`
+  mutation UpdatePayment($userId: String!, $orderId: String!) {
+    updatePayment(userId: $userId, orderId: $orderId)
+  }
+`;
+
 export default function Home() {
   const { data, loading, error } = useQuery<any>(GET_USERS);
 
@@ -62,6 +69,7 @@ export default function Home() {
   const [createOrder, { loading: creatingOrder }] = useMutation(CREATE_ORDER);
   const [placeOrder] = useMutation(PLACE_ORDER);
   const [cancelOrder] = useMutation(CANCEL_ORDER);
+  const [updatePayment] = useMutation(UPDATE_PAYMENT);
 
   const currentUser = data?.users.find(
     (u: any) => u.id === selectedUserId
@@ -103,6 +111,8 @@ export default function Home() {
         return 'bg-amber-100 text-amber-700 border-amber-200';
       case 'PLACED':
         return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+      case 'PAYMENT_UPDATED':
+        return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'CANCELLED':
         return 'bg-rose-100 text-rose-700 border-rose-200';
       default:
@@ -116,6 +126,8 @@ export default function Home() {
         return <Clock className="w-3.5 h-3.5 mr-1.5" />;
       case 'PLACED':
         return <CheckCircle className="w-3.5 h-3.5 mr-1.5" />;
+      case 'PAYMENT_UPDATED':
+        return <CreditCard className="w-3.5 h-3.5 mr-1.5" />;
       case 'CANCELLED':
         return <XCircle className="w-3.5 h-3.5 mr-1.5" />;
       default:
@@ -148,17 +160,17 @@ export default function Home() {
               {currentUser ? (
                 <div className="flex items-center gap-3 bg-white p-1.5 pr-4 rounded-full border border-slate-200 shadow-sm transition-all hover:shadow-md">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-100 to-blue-50 flex items-center justify-center border border-indigo-100">
-                     <User className="w-5 h-5 text-indigo-600" />
+                    <User className="w-5 h-5 text-indigo-600" />
                   </div>
                   <div className="hidden sm:block text-left mr-2">
                     <p className="text-sm font-bold text-slate-800 leading-tight">{currentUser.name}</p>
                     <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">{currentUser.role} • {currentUser.country}</p>
                   </div>
                   <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block"></div>
-                  <button 
+                  <button
                     onClick={() => {
-                        setSelectedUserId('');
-                        toast('Signed out successfully', { icon: '👋' });
+                      setSelectedUserId('');
+                      toast('Signed out successfully', { icon: '👋' });
                     }}
                     className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all group"
                     title="Log out"
@@ -196,17 +208,19 @@ export default function Home() {
         {!selectedUserId ? (
           <div className="flex flex-col items-center justify-center py-24 px-4">
             <div className="relative mb-8 group">
-               <div className="absolute inset-0 bg-blue-500 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-700"></div>
-               <div className="w-28 h-28 bg-white border border-slate-100 rounded-full flex items-center justify-center shadow-xl relative z-10 transform transition-transform duration-700 group-hover:rotate-12">
-                 <ShieldCheck className="w-14 h-14 text-indigo-500" />
-               </div>
+              <div className="absolute inset-0 bg-blue-500 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-700"></div>
+              <div className="w-28 h-28 bg-white border border-slate-100 rounded-full flex items-center justify-center shadow-xl relative z-10 transform transition-transform duration-700 group-hover:rotate-12">
+                <ShieldCheck className="w-14 h-14 text-indigo-500" />
+              </div>
             </div>
-            
+
             <h2 className="text-4xl sm:text-5xl font-black text-slate-900 mb-4 text-center tracking-tight">
               Premium <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-500">Food Ordering</span>
             </h2>
             <p className="text-slate-500 text-center max-w-2xl text-lg leading-relaxed mb-10 font-medium">
-              Experience our relational access model demonstrating role-based visibility. Select a user to witness dynamic permissions and multi-region restaurant routing in action.
+              Experience our relational access model demonstrating role-based visibility.
+              <br />
+              Select a user to witness dynamic permissions and multi-region restaurant routing in action.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <span className="flex items-center text-sm font-semibold text-slate-600 bg-white px-5 py-2.5 rounded-xl shadow-sm border border-slate-200"><ShieldCheck className="w-4 h-4 mr-2 text-indigo-500" /> Strict RBAC</span>
@@ -220,15 +234,15 @@ export default function Home() {
               <div>
                 <h2 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Restaurant Dashboard</h2>
                 <div className="flex items-center gap-4 mt-2">
-                   <p className="text-sm font-bold text-slate-500 flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
-                     <MapPin className="w-3.5 h-3.5 text-indigo-400" /> {currentUser.country} Region
-                   </p>
-                   <p className="text-sm font-bold text-slate-500 flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
-                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> {currentUser.role} Level
-                   </p>
+                  <p className="text-sm font-bold text-slate-500 flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
+                    <MapPin className="w-3.5 h-3.5 text-indigo-400" /> {currentUser.country} Region
+                  </p>
+                  <p className="text-sm font-bold text-slate-500 flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> {currentUser.role} Level
+                  </p>
                 </div>
               </div>
-              
+
               <button
                 disabled={creatingOrder}
                 className="group relative flex items-center justify-center gap-2 w-full sm:w-auto bg-slate-900 hover:bg-indigo-600 text-white px-8 py-3.5 rounded-2xl font-bold shadow-lg shadow-slate-900/20 hover:shadow-indigo-500/30 hover:-translate-y-1 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden"
@@ -243,7 +257,7 @@ export default function Home() {
               >
                 {/* Button shine effect */}
                 <div className="absolute inset-0 -translate-x-[150%] animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12"></div>
-                
+
                 {creatingOrder ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Plus className="w-5 h-5 transition-transform group-hover:rotate-180 duration-500" />}
                 <span className="relative z-10">Create Food Order</span>
               </button>
@@ -265,7 +279,7 @@ export default function Home() {
             {!ordersData || !ordersData.getOrders || JSON.parse(ordersData.getOrders).length === 0 ? (
               <div className="bg-white/50 backdrop-blur-sm border-2 border-dashed border-slate-200 rounded-3xl p-16 text-center max-w-2xl mx-auto mt-8">
                 <div className="bg-white w-20 h-20 rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-6 transform -rotate-6">
-                    <Package className="w-10 h-10 text-slate-300" />
+                  <Package className="w-10 h-10 text-slate-300" />
                 </div>
                 <h4 className="text-xl font-bold text-slate-700 mb-2">No Active Orders</h4>
                 <p className="text-slate-500 text-base max-w-sm mx-auto">Your cart is currently empty. Create a new food order to begin.</p>
@@ -294,7 +308,7 @@ export default function Home() {
                     <div className="mb-6 flex-grow relative z-10">
                       <div className="flex items-center text-sm font-medium text-slate-600 bg-slate-50/50 border border-slate-100 p-3 rounded-xl gap-3">
                         <div className="bg-white p-1.5 rounded-lg shadow-sm">
-                           <MapPin className="w-4 h-4 text-indigo-400" />
+                          <MapPin className="w-4 h-4 text-indigo-400" />
                         </div>
                         <div>
                           <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-0.5">Deployment Zone</p>
@@ -304,41 +318,61 @@ export default function Home() {
                     </div>
 
                     {/* ACTIONS */}
-                    <div className="flex gap-2.5 pt-4 border-t border-slate-100 relative z-10">
+                    <div className="flex flex-col gap-2.5 pt-4 border-t border-slate-100 relative z-10">
                       {(currentUser.role === 'ADMIN' || currentUser.role === 'MANAGER') ? (
                         <>
-                          <button
-                            disabled={order.status !== 'CREATED'}
-                            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-all
-                              ${order.status === 'CREATED' 
-                                ? 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white shadow-sm hover:shadow-indigo-600/20' 
-                                : 'bg-slate-50 text-slate-400 cursor-not-allowed opacity-60'}`}
-                            onClick={() =>
-                              placeOrder({ variables: { userId: currentUser.id, orderId: order.id } })
-                                .then(() => { toast.success('Order Placed! 🚀'); refetch(); })
-                                .catch(() => toast.error('Checkout Failed'))
-                            }
-                          >
-                            <CheckCircle className="w-4 h-4" /> 
-                            Checkout & Pay
-                          </button>
+                          <div className="flex gap-2.5">
+                            <button
+                              disabled={order.status !== 'CREATED'}
+                              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-all
+                                ${order.status === 'CREATED'
+                                  ? 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white shadow-sm hover:shadow-indigo-600/20'
+                                  : 'bg-slate-50 text-slate-400 cursor-not-allowed opacity-60'}`}
+                              onClick={() =>
+                                placeOrder({ variables: { userId: currentUser.id, orderId: order.id } })
+                                  .then(() => { toast.success('Order Placed! 🚀'); refetch(); })
+                                  .catch(() => toast.error('Place order Failed'))
+                              }
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              Place Order
+                            </button>
 
-                          <button
-                            disabled={order.status === 'CANCELLED' || order.status === 'PLACED'}
-                            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-all
-                              ${(order.status !== 'CANCELLED' && order.status !== 'PLACED')
-                                ? 'bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white shadow-sm hover:shadow-rose-500/20' 
-                                : 'bg-slate-50 text-slate-300 cursor-not-allowed opacity-60'}`}
-                            onClick={() =>
-                              cancelOrder({ variables: { userId: currentUser.id, orderId: order.id } })
-                                .then(() => { toast.error('Order Cancelled', { icon: '🛑' }); refetch(); })
-                                .catch(() => toast.error('Cancel Failed'))
-                            }
-                            title="Cancel Order"
-                          >
-                            <XCircle className="w-4 h-4" />
-                            Cancel
-                          </button>
+                            <button
+                              disabled={order.status === 'CANCELLED' || order.status === 'PLACED' || order.status === 'PAYMENT_UPDATED'}
+                              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-all
+                                ${(order.status !== 'CANCELLED' && order.status !== 'PLACED' && order.status !== 'PAYMENT_UPDATED')
+                                  ? 'bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white shadow-sm hover:shadow-rose-500/20'
+                                  : 'bg-slate-50 text-slate-300 cursor-not-allowed opacity-60'}`}
+                              onClick={() =>
+                                cancelOrder({ variables: { userId: currentUser.id, orderId: order.id } })
+                                  .then(() => { toast.error('Order Cancelled', { icon: '🛑' }); refetch(); })
+                                  .catch(() => toast.error('Cancel Failed'))
+                              }
+                              title="Cancel Order"
+                            >
+                              <XCircle className="w-4 h-4" />
+                              Cancel
+                            </button>
+                          </div>
+
+                          {currentUser.role === 'ADMIN' && (
+                            <button
+                              disabled={order.status === 'CANCELLED'}
+                              className={`w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-all
+                                ${order.status !== 'CANCELLED'
+                                  ? 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white shadow-sm hover:shadow-blue-600/20'
+                                  : 'bg-slate-50 text-slate-400 cursor-not-allowed opacity-60'}`}
+                              onClick={() =>
+                                updatePayment({ variables: { userId: currentUser.id, orderId: order.id } })
+                                  .then(() => { toast.success('Payment Method Updated 💳'); refetch(); })
+                                  .catch(() => toast.error('Payment Update Failed'))
+                              }
+                            >
+                              <CreditCard className="w-4 h-4" />
+                              Update Payment Method
+                            </button>
+                          )}
                         </>
                       ) : (
                         <div className="w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-wide text-slate-400 bg-slate-50 border border-slate-100 text-center flex items-center justify-center gap-2">
